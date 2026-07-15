@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 
 type City = "chennai" | "calcutta";
+type SkyPeriod = "dawn" | "day" | "dusk" | "night";
 
 type Flight = {
   id: string;
@@ -85,6 +86,21 @@ function positionOnRadar(flight: Flight, city: City, now: number, radiusKm: numb
 
 function formatAltitude(value: number | null) {
   return value === null ? "altitude unavailable" : `${value.toLocaleString("en-IN")} ft`;
+}
+
+function getSkyPeriod(timestamp: number): SkyPeriod {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      hourCycle: "h23",
+    }).format(timestamp),
+  );
+
+  if (hour >= 5 && hour < 7) return "dawn";
+  if (hour >= 17 && hour < 19) return "dusk";
+  if (hour >= 19 || hour < 5) return "night";
+  return "day";
 }
 
 export default function Home() {
@@ -190,8 +206,10 @@ export default function Home() {
     [flights, city, now, radiusKm],
   );
 
+  const skyPeriod = useMemo(() => getSkyPeriod(now), [now]);
+
   return (
-    <main className="radar" aria-labelledby="app-title">
+    <main className={`radar sky--${skyPeriod}`} aria-labelledby="app-title" data-sky={skyPeriod}>
       <h1 className="sr-only" id="app-title">Flights over Dibbo</h1>
 
       <header className="topbar">
