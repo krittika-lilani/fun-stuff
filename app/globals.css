@@ -196,7 +196,7 @@ button { font: inherit; }
   width: 1px;
   height: 1px;
   color: var(--theme-ink);
-  transition: left 1s linear, top 1s linear;
+  transition: left 1s linear, top 1s linear, opacity .35s ease;
 }
 
 .flight-motion {

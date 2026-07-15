@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 type City = "chennai" | "calcutta";
 type SkyPeriod = "dawn" | "day" | "dusk" | "night";
@@ -16,6 +16,7 @@ type Flight = {
   latitude: number;
   longitude: number;
   positionTime: number;
+  feedUpdatedAt: number;
   distanceKm: number;
 };
 
@@ -40,6 +41,19 @@ const LOCATIONS = {
 
 const REFRESH_INTERVAL_MS = 10_000;
 const DEFAULT_RADIUS_KM = 37.04;
+const SEARCH_RADIUS_NM = 40;
+const MAX_UNCONFIRMED_TRACK_MS = 5 * 60 * 1000;
+
+const SKY_BACKGROUNDS: Record<SkyPeriod, string> = {
+  dawn:
+    "radial-gradient(circle at 18% 88%, rgba(255, 187, 148, .42), transparent 42%), radial-gradient(circle at 95% 12%, rgba(177, 209, 229, .5), transparent 44%), linear-gradient(165deg, #dbeaf2 0%, #f4e7e1 55%, #fff4e9 100%)",
+  day:
+    "radial-gradient(circle at 8% 5%, rgba(129, 175, 198, .13), transparent 30%), radial-gradient(circle at 100% 72%, rgba(173, 199, 211, .12), transparent 32%), linear-gradient(150deg, #fff 0%, #fbfcfd 54%, #f5f9fa 100%)",
+  dusk:
+    "radial-gradient(circle at 8% 90%, rgba(229, 133, 119, .56), transparent 40%), radial-gradient(circle at 95% 36%, rgba(114, 113, 164, .45), transparent 48%), linear-gradient(165deg, #536580 0%, #77738e 48%, #c0847e 100%)",
+  night:
+    "radial-gradient(circle at 75% 15%, rgba(54, 91, 126, .36), transparent 36%), radial-gradient(circle at 12% 88%, rgba(31, 67, 104, .3), transparent 42%), linear-gradient(165deg, #0b2036 0%, #07192e 55%, #051426 100%)",
+};
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -58,7 +72,7 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 }
 
 function predictPosition(flight: Flight, now: number) {
-  const elapsedSeconds = clamp((now - flight.positionTime) / 1000, 0, 30);
+  const elapsedSeconds = clamp((now - flight.positionTime) / 1000, 0, 300);
   const distanceKm = flight.groundSpeedKnots * 1.852 * (elapsedSeconds / 3600);
   const bearing = (flight.trackDegrees * Math.PI) / 180;
   const latitude = flight.latitude + (distanceKm * Math.cos(bearing)) / 111.32;
@@ -78,8 +92,8 @@ function positionOnRadar(flight: Flight, city: City, now: number, radiusKm: numb
     111.32 *
     Math.cos((center.latitude * Math.PI) / 180);
   return {
-    x: clamp(50 + (eastKm / radiusKm) * 44, 5, 95),
-    y: clamp(50 - (northKm / radiusKm) * 44, 6, 94),
+    x: 50 + (eastKm / radiusKm) * 50,
+    y: 50 - (northKm / radiusKm) * 50,
     distanceKm: Math.hypot(northKm, eastKm),
   };
 }
@@ -110,12 +124,13 @@ export default function Home() {
   const [now, setNow] = useState(() => Date.now());
   const [status, setStatus] = useState<"loading" | "live" | "error">("loading");
   const [message, setMessage] = useState("Looking for nearby aircraft…");
+  const activeCityRef = useRef<City>("chennai");
 
   const fetchFlights = useCallback(async (selectedCity: City, signal?: AbortSignal) => {
     try {
       const location = LOCATIONS[selectedCity];
       const response = await fetch(
-        `https://api.airplanes.live/v2/point/${location.latitude}/${location.longitude}/20`,
+        `https://api.airplanes.live/v2/point/${location.latitude}/${location.longitude}/${SEARCH_RADIUS_NM}`,
         {
         cache: "no-store",
         signal,
@@ -146,13 +161,29 @@ export default function Home() {
             latitude,
             longitude,
             positionTime: timestamp - seenSeconds * 1000,
+            feedUpdatedAt: timestamp,
             distanceKm: distanceKm(location.latitude, location.longitude, latitude, longitude),
           } satisfies Flight;
         })
         .sort((a, b) => a.distanceKm - b.distanceKm)
-        .slice(0, 8);
+        .slice(0, 24);
 
-      setFlights(nextFlights);
+      if (activeCityRef.current !== selectedCity) return;
+
+      setFlights((currentFlights) => {
+        const tracks = new Map(currentFlights.map((flight) => [flight.id, flight]));
+        nextFlights.forEach((flight) => tracks.set(flight.id, flight));
+
+        return [...tracks.values()]
+          .filter((flight) => {
+            const position = positionOnRadar(flight, selectedCity, timestamp, DEFAULT_RADIUS_KM);
+            const recentlyConfirmed = timestamp - flight.feedUpdatedAt < MAX_UNCONFIRMED_TRACK_MS;
+            const nearVisibleArea =
+              position.x > -35 && position.x < 135 && position.y > -35 && position.y < 135;
+            return recentlyConfirmed && nearVisibleArea;
+          })
+          .sort((a, b) => a.distanceKm - b.distanceKm);
+      });
       setRadiusKm(DEFAULT_RADIUS_KM);
       setStatus("live");
       setMessage(
@@ -169,6 +200,7 @@ export default function Home() {
 
   useEffect(() => {
     const controller = new AbortController();
+    activeCityRef.current = city;
     setFlights([]);
     setStatus("loading");
     setMessage("Looking for nearby aircraft…");
@@ -199,17 +231,24 @@ export default function Home() {
 
   const plottedFlights = useMemo(
     () =>
-      flights.map((flight) => ({
-        flight,
-        ...positionOnRadar(flight, city, now, radiusKm),
-      })),
+      flights
+        .map((flight) => ({
+          flight,
+          ...positionOnRadar(flight, city, now, radiusKm),
+        }))
+        .filter(({ x, y }) => x >= 0 && x <= 100 && y >= 0 && y <= 100),
     [flights, city, now, radiusKm],
   );
 
   const skyPeriod = useMemo(() => getSkyPeriod(now), [now]);
 
   return (
-    <main className={`radar sky--${skyPeriod}`} aria-labelledby="app-title" data-sky={skyPeriod}>
+    <main
+      className={`radar sky--${skyPeriod}`}
+      aria-labelledby="app-title"
+      data-sky={skyPeriod}
+      style={{ background: SKY_BACKGROUNDS[skyPeriod] }}
+    >
       <h1 className="sr-only" id="app-title">Flights over Dibbo</h1>
 
       <header className="topbar">
@@ -220,7 +259,10 @@ export default function Home() {
               type="button"
               key={key}
               aria-pressed={city === key}
-              onClick={() => setCity(key)}
+              onClick={() => {
+                activeCityRef.current = key;
+                setCity(key);
+              }}
             >
               {LOCATIONS[key].shortLabel}
             </button>
