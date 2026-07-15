@@ -214,7 +214,7 @@ export default function Home() {
             <span className={`live-state live-state--${status}`}>{status === "live" ? "live" : status}</span>
           </div>
         </div>
-        <span className="data-credit">adsb.lol</span>
+        <span className="data-credit">airplanes.live</span>
       </footer>
     </main>
   );

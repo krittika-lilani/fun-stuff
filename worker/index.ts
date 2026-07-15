@@ -34,11 +34,11 @@ async function getFlights(request: Request) {
   const requestedCity = requestUrl.searchParams.get("city") ?? "chennai";
   const city = requestedCity in LOCATIONS ? requestedCity as keyof typeof LOCATIONS : "chennai";
   const location = LOCATIONS[city];
-  const upstreamUrl = `https://api.adsb.lol/v2/point/${location.latitude}/${location.longitude}/${RADIUS_NM}`;
+  const upstreamUrl = `https://api.airplanes.live/v2/point/${location.latitude}/${location.longitude}/${RADIUS_NM}`;
 
   try {
     const upstream = await fetch(upstreamUrl, {
-      headers: { Accept: "application/json", "User-Agent": "over-dibbo/1.0" },
+      headers: { Accept: "application/json" },
     });
 
     if (!upstream.ok) {
@@ -84,6 +84,7 @@ async function getFlights(request: Request) {
         center: location,
         radiusKm: RADIUS_NM * 1.852,
         updatedAt: now,
+        source: "airplanes.live",
         flights,
       },
       { headers: { "Cache-Control": "no-store" } },
