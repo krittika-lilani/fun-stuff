@@ -352,10 +352,11 @@ button { font: inherit; }
 
 .footer-heart {
   margin-left: auto;
-  color: var(--theme-muted);
-  font-size: .66rem;
+  color: #929ba2;
+  font-size: .82rem;
   line-height: 1;
-  opacity: .62;
+  opacity: .9;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, .12);
 }
 
 @media (min-width: 600px) {

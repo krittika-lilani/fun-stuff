@@ -314,7 +314,7 @@ export default function Home() {
             <span className={`live-state live-state--${status}`}>{status === "live" ? "live" : status}</span>
           </div>
         </div>
-        <span className="footer-heart" aria-label="Made with care">♥</span>
+        <span className="footer-heart" aria-label="Made with care" title="Made with care">♥</span>
       </footer>
     </main>
   );
