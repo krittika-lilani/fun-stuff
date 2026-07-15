@@ -18,12 +18,7 @@ type Flight = {
   distanceKm: number;
 };
 
-type FlightResponse = {
-  radiusKm: number;
-  flights: Flight[];
-  updatedAt: number;
-  error?: string;
-};
+type RawAircraft = Record<string, unknown>;
 
 const LOCATIONS = {
   chennai: {
@@ -47,6 +42,18 @@ const DEFAULT_RADIUS_KM = 37.04;
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const deltaLatitude = toRadians(lat2 - lat1);
+  const deltaLongitude = toRadians(lon2 - lon1);
+  const a =
+    Math.sin(deltaLatitude / 2) ** 2 +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(deltaLongitude / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function predictPosition(flight: Flight, now: number) {
@@ -90,19 +97,52 @@ export default function Home() {
 
   const fetchFlights = useCallback(async (selectedCity: City, signal?: AbortSignal) => {
     try {
-      const response = await fetch(`/api/flights?city=${selectedCity}`, {
+      const location = LOCATIONS[selectedCity];
+      const response = await fetch(
+        `https://api.airplanes.live/v2/point/${location.latitude}/${location.longitude}/20`,
+        {
         cache: "no-store",
         signal,
-      });
-      const data = await response.json() as FlightResponse;
-      if (!response.ok) throw new Error(data.error ?? "Live feed unavailable");
-      setFlights(data.flights);
-      setRadiusKm(data.radiusKm);
+        },
+      );
+      if (!response.ok) throw new Error("Live feed unavailable");
+      const data = await response.json() as { ac?: RawAircraft[] };
+      const timestamp = Date.now();
+      const nextFlights = (data.ac ?? [])
+        .filter((aircraft) =>
+          typeof aircraft.lat === "number" &&
+          typeof aircraft.lon === "number" &&
+          aircraft.alt_baro !== "ground" &&
+          (typeof aircraft.seen_pos !== "number" || aircraft.seen_pos < 60),
+        )
+        .map((aircraft) => {
+          const latitude = aircraft.lat as number;
+          const longitude = aircraft.lon as number;
+          const seenSeconds = typeof aircraft.seen_pos === "number" ? aircraft.seen_pos : 0;
+          return {
+            id: String(aircraft.hex ?? `${latitude}-${longitude}`),
+            callsign: String(aircraft.flight ?? aircraft.r ?? aircraft.hex ?? "Aircraft").trim(),
+            registration: typeof aircraft.r === "string" ? aircraft.r.trim() : "Live ADS-B",
+            aircraftType: typeof aircraft.t === "string" ? aircraft.t.trim() : "Aircraft",
+            altitudeFeet: typeof aircraft.alt_baro === "number" ? Math.round(aircraft.alt_baro) : null,
+            groundSpeedKnots: typeof aircraft.gs === "number" ? aircraft.gs : 0,
+            trackDegrees: typeof aircraft.track === "number" ? aircraft.track : 0,
+            latitude,
+            longitude,
+            positionTime: timestamp - seenSeconds * 1000,
+            distanceKm: distanceKm(location.latitude, location.longitude, latitude, longitude),
+          } satisfies Flight;
+        })
+        .sort((a, b) => a.distanceKm - b.distanceKm)
+        .slice(0, 8);
+
+      setFlights(nextFlights);
+      setRadiusKm(DEFAULT_RADIUS_KM);
       setStatus("live");
       setMessage(
-        data.flights.length === 0
+        nextFlights.length === 0
           ? "No aircraft within 37 km right now"
-          : `${data.flights.length} aircraft nearby`,
+          : `${nextFlights.length} aircraft nearby`,
       );
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
