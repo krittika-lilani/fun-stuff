@@ -350,11 +350,12 @@ button { font: inherit; }
 .live-state--live { color: var(--blue); }
 .live-state--error { color: #9b615c; }
 
-.data-credit {
+.footer-heart {
   margin-left: auto;
   color: var(--theme-muted);
-  font-size: .43rem;
-  letter-spacing: .03em;
+  font-size: .66rem;
+  line-height: 1;
+  opacity: .62;
 }
 
 @media (min-width: 600px) {
