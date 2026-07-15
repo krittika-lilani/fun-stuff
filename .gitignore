@@ -1,0 +1,9 @@
+/node_modules
+/.pnpm-store
+/.next
+/.vinext
+/dist
+/.wrangler
+/.env*
+.DS_Store
+*.log
