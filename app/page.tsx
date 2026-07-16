@@ -40,9 +40,9 @@ const LOCATIONS = {
 } as const;
 
 const REFRESH_INTERVAL_MS = 10_000;
-const DEFAULT_RADIUS_KM = 37.04;
-const SEARCH_RADIUS_NM = 40;
-const MAX_UNCONFIRMED_TRACK_MS = 5 * 60 * 1000;
+const RADAR_RADIUS_KM = 100;
+const SEARCH_RADIUS_NM = 100;
+const MAX_TRACK_AGE_MS = 30 * 60 * 1000;
 
 const SKY_BACKGROUNDS: Record<SkyPeriod, string> = {
   dawn:
@@ -72,7 +72,7 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 }
 
 function predictPosition(flight: Flight, now: number) {
-  const elapsedSeconds = clamp((now - flight.positionTime) / 1000, 0, 300);
+  const elapsedSeconds = clamp((now - flight.positionTime) / 1000, 0, MAX_TRACK_AGE_MS / 1000);
   const distanceKm = flight.groundSpeedKnots * 1.852 * (elapsedSeconds / 3600);
   const bearing = (flight.trackDegrees * Math.PI) / 180;
   const latitude = flight.latitude + (distanceKm * Math.cos(bearing)) / 111.32;
@@ -120,7 +120,6 @@ function getSkyPeriod(timestamp: number): SkyPeriod {
 export default function Home() {
   const [city, setCity] = useState<City>("chennai");
   const [flights, setFlights] = useState<Flight[]>([]);
-  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
   const [now, setNow] = useState(() => Date.now());
   const [status, setStatus] = useState<"loading" | "live" | "error">("loading");
   const [message, setMessage] = useState("Looking for nearby aircraft…");
@@ -176,19 +175,18 @@ export default function Home() {
 
         return [...tracks.values()]
           .filter((flight) => {
-            const position = positionOnRadar(flight, selectedCity, timestamp, DEFAULT_RADIUS_KM);
-            const recentlyConfirmed = timestamp - flight.feedUpdatedAt < MAX_UNCONFIRMED_TRACK_MS;
+            const position = positionOnRadar(flight, selectedCity, timestamp, RADAR_RADIUS_KM);
+            const trackIsCurrent = timestamp - flight.feedUpdatedAt < MAX_TRACK_AGE_MS;
             const nearVisibleArea =
-              position.x > -35 && position.x < 135 && position.y > -35 && position.y < 135;
-            return recentlyConfirmed && nearVisibleArea;
+              position.x > -45 && position.x < 145 && position.y > -45 && position.y < 145;
+            return trackIsCurrent && nearVisibleArea;
           })
           .sort((a, b) => a.distanceKm - b.distanceKm);
       });
-      setRadiusKm(DEFAULT_RADIUS_KM);
       setStatus("live");
       setMessage(
         nextFlights.length === 0
-          ? "No aircraft within 37 km right now"
+          ? `No aircraft within ${RADAR_RADIUS_KM} km right now`
           : `${nextFlights.length} aircraft nearby`,
       );
     } catch (error) {
@@ -234,10 +232,10 @@ export default function Home() {
       flights
         .map((flight) => ({
           flight,
-          ...positionOnRadar(flight, city, now, radiusKm),
+          ...positionOnRadar(flight, city, now, RADAR_RADIUS_KM),
         }))
         .filter(({ x, y }) => x >= 0 && x <= 100 && y >= 0 && y <= 100),
-    [flights, city, now, radiusKm],
+    [flights, city, now],
   );
 
   const skyPeriod = useMemo(() => getSkyPeriod(now), [now]);
@@ -297,8 +295,10 @@ export default function Home() {
           );
         })}
 
-        {flights.length === 0 && (
-          <p className={`feed-message feed-message--${status}`}>{message}</p>
+        {plottedFlights.length === 0 && (
+          <p className={`feed-message feed-message--${status}`}>
+            {status === "live" ? `No aircraft within ${RADAR_RADIUS_KM} km right now` : message}
+          </p>
         )}
       </section>
 
