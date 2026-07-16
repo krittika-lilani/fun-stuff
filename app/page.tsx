@@ -120,7 +120,7 @@ function getSkyPeriod(timestamp: number): SkyPeriod {
 export default function Home() {
   const [city, setCity] = useState<City>("chennai");
   const [flights, setFlights] = useState<Flight[]>([]);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState<number | null>(null);
   const [status, setStatus] = useState<"loading" | "live" | "error">("loading");
   const [message, setMessage] = useState("Looking for nearby aircraft…");
   const activeCityRef = useRef<City>("chennai");
@@ -211,19 +211,22 @@ export default function Home() {
   }, [city, fetchFlights]);
 
   useEffect(() => {
+    setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
 
   const time = useMemo(
-    () =>
-      new Intl.DateTimeFormat("en-GB", {
+    () => {
+      if (now === null) return "--:--:--";
+      return new Intl.DateTimeFormat("en-GB", {
         timeZone: "Asia/Kolkata",
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
         hour12: false,
-      }).format(now),
+      }).format(now);
+    },
     [now],
   );
 
@@ -232,13 +235,13 @@ export default function Home() {
       flights
         .map((flight) => ({
           flight,
-          ...positionOnRadar(flight, city, now, RADAR_RADIUS_KM),
+          ...positionOnRadar(flight, city, now ?? 0, RADAR_RADIUS_KM),
         }))
         .filter(({ x, y }) => x >= 0 && x <= 100 && y >= 0 && y <= 100),
     [flights, city, now],
   );
 
-  const skyPeriod = useMemo(() => getSkyPeriod(now), [now]);
+  const skyPeriod = useMemo(() => now === null ? "day" : getSkyPeriod(now), [now]);
 
   return (
     <main
@@ -309,7 +312,12 @@ export default function Home() {
           <div className="dibbo-meta">
             <span>{LOCATIONS[city].coordinates}</span>
             <span aria-hidden="true">·</span>
-            <time dateTime={new Date(now).toISOString()} aria-label={`${time} Indian Standard Time`}>{time}</time>
+            <time
+              dateTime={now === null ? undefined : new Date(now).toISOString()}
+              aria-label={now === null ? "Loading Indian Standard Time" : `${time} Indian Standard Time`}
+            >
+              {time}
+            </time>
             <span aria-hidden="true">·</span>
             <span className={`live-state live-state--${status}`}>{status === "live" ? "live" : status}</span>
           </div>
