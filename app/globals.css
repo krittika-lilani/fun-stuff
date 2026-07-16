@@ -1,9 +1,9 @@
 :root {
   color-scheme: light;
-  --ink: #172027;
+  --ink: #3b454b;
   --muted: #7d8a93;
-  --glass: rgba(230, 240, 245, .16);
-  --glass-edge: rgba(124, 157, 174, .24);
+  --glass: rgba(230, 240, 245, .08);
+  --glass-edge: rgba(124, 157, 174, .16);
   --blue: #32779d;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
 }
@@ -34,12 +34,13 @@ button { font: inherit; }
 }
 
 .radar {
-  --theme-ink: #172027;
+  --theme-ink: #3b454b;
   --theme-muted: rgba(75, 93, 103, .55);
   --theme-soft: rgba(58, 73, 81, .5);
   --theme-plane: rgba(49, 102, 130, .72);
   --theme-trail: rgba(105, 139, 155, .38);
   --theme-text-shadow: rgba(255, 255, 255, .95);
+  --theme-love: #c98292;
   position: relative;
   isolation: isolate;
   display: grid;
@@ -57,14 +58,15 @@ button { font: inherit; }
 }
 
 .radar.sky--dawn {
-  --theme-ink: #263743;
+  --theme-ink: #3b4951;
   --theme-muted: rgba(53, 75, 89, .58);
   --theme-soft: rgba(50, 72, 86, .54);
   --theme-plane: rgba(46, 91, 118, .76);
   --theme-trail: rgba(102, 131, 149, .4);
   --theme-text-shadow: rgba(255, 242, 232, .82);
-  --glass: rgba(255, 239, 229, .12);
-  --glass-edge: rgba(143, 164, 179, .26);
+  --theme-love: #cf8495;
+  --glass: rgba(255, 239, 229, .07);
+  --glass-edge: rgba(143, 164, 179, .17);
   background:
     radial-gradient(circle at 18% 88%, rgba(255, 187, 148, .42), transparent 42%),
     radial-gradient(circle at 95% 12%, rgba(177, 209, 229, .5), transparent 44%),
@@ -78,8 +80,9 @@ button { font: inherit; }
   --theme-plane: rgba(241, 229, 220, .88);
   --theme-trail: rgba(231, 220, 235, .48);
   --theme-text-shadow: rgba(34, 38, 66, .58);
-  --glass: rgba(219, 225, 241, .1);
-  --glass-edge: rgba(235, 234, 246, .22);
+  --theme-love: #f4bdca;
+  --glass: rgba(219, 225, 241, .055);
+  --glass-edge: rgba(235, 234, 246, .14);
   background:
     radial-gradient(circle at 8% 90%, rgba(229, 133, 119, .56), transparent 40%),
     radial-gradient(circle at 95% 36%, rgba(114, 113, 164, .45), transparent 48%),
@@ -93,12 +96,13 @@ button { font: inherit; }
   --theme-plane: rgba(199, 228, 243, .9);
   --theme-trail: rgba(185, 215, 230, .46);
   --theme-text-shadow: rgba(2, 13, 31, .78);
-  --glass: rgba(178, 207, 225, .08);
-  --glass-edge: rgba(197, 224, 239, .2);
+  --theme-love: #dfaabc;
+  --glass: rgba(116, 153, 176, .035);
+  --glass-edge: rgba(151, 181, 200, .11);
   background:
-    radial-gradient(circle at 75% 15%, rgba(54, 91, 126, .36), transparent 36%),
-    radial-gradient(circle at 12% 88%, rgba(31, 67, 104, .3), transparent 42%),
-    linear-gradient(165deg, #0b2036 0%, #07192e 55%, #051426 100%);
+    radial-gradient(circle at 76% 14%, rgba(31, 56, 78, .26), transparent 38%),
+    radial-gradient(circle at 9% 92%, rgba(22, 42, 62, .2), transparent 44%),
+    linear-gradient(165deg, #0b1722 0%, #07111c 56%, #040b13 100%);
 }
 
 .radar::before {
@@ -119,13 +123,13 @@ button { font: inherit; }
 }
 
 .radar.sky--night::before {
-  opacity: .34;
+  opacity: .2;
   background-image:
-    radial-gradient(circle, rgba(237, 248, 255, .72) 0 .55px, transparent .7px),
-    radial-gradient(circle, rgba(190, 218, 235, .54) 0 .4px, transparent .58px),
-    radial-gradient(circle, rgba(255, 255, 255, .38) 0 .35px, transparent .52px);
-  background-size: 43px 47px, 67px 61px, 29px 37px;
-  background-position: 7px 11px, 23px 31px, 3px 19px;
+    radial-gradient(circle, rgba(190, 207, 219, .58) 0 .55px, transparent .75px),
+    radial-gradient(circle, rgba(151, 176, 194, .42) 0 .4px, transparent .62px),
+    radial-gradient(circle, rgba(214, 224, 231, .32) 0 .35px, transparent .58px);
+  background-size: 113px 127px, 173px 181px, 239px 211px;
+  background-position: 17px 23px, 71px 89px, 31px 151px;
 }
 
 .topbar {
@@ -148,9 +152,8 @@ button { font: inherit; }
   border-radius: 999px;
   background: var(--glass);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, .38),
-    inset 0 -1px 0 rgba(71, 105, 122, .06),
-    0 8px 24px rgba(23, 44, 57, .11);
+    inset 0 1px 0 rgba(255, 255, 255, .16),
+    0 8px 24px rgba(23, 44, 57, .07);
   -webkit-backdrop-filter: blur(18px) saturate(145%);
   backdrop-filter: blur(18px) saturate(145%);
 }
@@ -179,14 +182,25 @@ button { font: inherit; }
   bottom: .2rem;
   left: .2rem;
   width: calc(50% - .2rem);
-  border: 1px solid rgba(255, 255, 255, .28);
+  border: 1px solid rgba(255, 255, 255, .14);
   border-radius: 999px;
-  background: rgba(255, 255, 255, .1);
-  box-shadow: inset 0 1px 4px rgba(52, 79, 93, .06), 0 1px 1px rgba(255, 255, 255, .24);
+  background: rgba(255, 255, 255, .055);
+  box-shadow: inset 0 1px 4px rgba(52, 79, 93, .045);
   transition: transform 300ms cubic-bezier(.22, 1, .36, 1);
 }
 
 .location-toggle[data-selected="calcutta"] .toggle-glider { transform: translateX(100%); }
+
+.radar.sky--night .location-toggle,
+.radar.sky--night .dibbo-marker {
+  box-shadow: 0 8px 24px rgba(0, 5, 12, .14);
+}
+
+.radar.sky--night .toggle-glider {
+  border-color: rgba(140, 171, 190, .08);
+  background: rgba(119, 151, 171, .035);
+  box-shadow: none;
+}
 
 .airspace { position: relative; min-height: 35rem; }
 
@@ -298,9 +312,8 @@ button { font: inherit; }
   border-radius: 999px;
   background: var(--glass);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, .38),
-    inset 0 -1px 0 rgba(71, 105, 122, .06),
-    0 8px 24px rgba(23, 44, 57, .11);
+    inset 0 1px 0 rgba(255, 255, 255, .16),
+    0 8px 24px rgba(23, 44, 57, .07);
   -webkit-backdrop-filter: blur(18px) saturate(145%);
   backdrop-filter: blur(18px) saturate(145%);
 }
@@ -335,6 +348,17 @@ button { font: inherit; }
   box-shadow: 0 0 0 .18rem rgba(93, 159, 190, .16);
 }
 
+.radar.sky--night .dibbo-pin {
+  border-color: rgba(105, 153, 179, .2);
+  background: rgba(99, 139, 164, .035);
+  box-shadow: none;
+}
+
+.radar.sky--night .dibbo-pin span {
+  border-color: rgba(192, 215, 227, .44);
+  box-shadow: 0 0 0 .18rem rgba(73, 128, 157, .1);
+}
+
 .dibbo-label { min-width: 0; display: flex; flex-direction: column; gap: .12rem; }
 .dibbo-label strong { color: var(--theme-ink); font-size: .72rem; font-weight: 680; text-transform: lowercase; }
 
@@ -354,11 +378,45 @@ button { font: inherit; }
 
 .footer-heart {
   margin-left: auto;
+  padding: .25rem;
+  border: 0;
   color: #929ba2;
+  background: transparent;
   font-size: .82rem;
   line-height: 1;
   opacity: .9;
   text-shadow: 0 1px 5px rgba(0, 0, 0, .12);
+  cursor: pointer;
+  transition: color .2s ease, opacity .2s ease, transform .2s ease;
+}
+
+.footer-heart:hover { opacity: 1; transform: scale(1.08); }
+.footer-heart:active { transform: scale(.92); }
+.footer-heart:focus-visible { outline: 1px solid var(--glass-edge); outline-offset: 2px; }
+
+.love-note {
+  position: absolute;
+  right: .65rem;
+  bottom: calc(100% + .55rem);
+  padding: .48rem .72rem;
+  border: 1px solid color-mix(in srgb, var(--theme-love) 24%, var(--glass-edge));
+  border-radius: 999px;
+  color: var(--theme-love);
+  background: color-mix(in srgb, var(--glass) 72%, transparent);
+  box-shadow: 0 7px 22px rgba(23, 44, 57, .08);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+  backdrop-filter: blur(16px) saturate(125%);
+  font-size: .62rem;
+  font-weight: 420;
+  letter-spacing: .01em;
+  opacity: .88;
+  white-space: nowrap;
+  animation: love-note-in .35s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes love-note-in {
+  from { opacity: 0; transform: translateY(.35rem) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @media (min-width: 600px) {

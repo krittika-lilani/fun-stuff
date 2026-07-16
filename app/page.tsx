@@ -41,8 +41,8 @@ const LOCATIONS = {
 
 const REFRESH_INTERVAL_MS = 10_000;
 const RADAR_RADIUS_KM = 100;
-const SEARCH_RADIUS_NM = 100;
-const MAX_TRACK_AGE_MS = 30 * 60 * 1000;
+const MAX_PREDICTION_MS = 20_000;
+const MAX_TRACK_AGE_MS = 60_000;
 const MAX_VISIBLE_LABELS = 7;
 
 const SKY_BACKGROUNDS: Record<SkyPeriod, string> = {
@@ -53,7 +53,7 @@ const SKY_BACKGROUNDS: Record<SkyPeriod, string> = {
   dusk:
     "radial-gradient(circle at 8% 90%, rgba(229, 133, 119, .56), transparent 40%), radial-gradient(circle at 95% 36%, rgba(114, 113, 164, .45), transparent 48%), linear-gradient(165deg, #536580 0%, #77738e 48%, #c0847e 100%)",
   night:
-    "radial-gradient(circle at 75% 15%, rgba(54, 91, 126, .36), transparent 36%), radial-gradient(circle at 12% 88%, rgba(31, 67, 104, .3), transparent 42%), linear-gradient(165deg, #0b2036 0%, #07192e 55%, #051426 100%)",
+    "radial-gradient(circle at 76% 14%, rgba(31, 56, 78, .26), transparent 38%), radial-gradient(circle at 9% 92%, rgba(22, 42, 62, .2), transparent 44%), linear-gradient(165deg, #0b1722 0%, #07111c 56%, #040b13 100%)",
 };
 
 function clamp(value: number, minimum: number, maximum: number) {
@@ -73,7 +73,7 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 }
 
 function predictPosition(flight: Flight, now: number) {
-  const elapsedSeconds = clamp((now - flight.positionTime) / 1000, 0, MAX_TRACK_AGE_MS / 1000);
+  const elapsedSeconds = clamp((now - flight.positionTime) / 1000, 0, MAX_PREDICTION_MS / 1000);
   const distanceKm = flight.groundSpeedKnots * 1.852 * (elapsedSeconds / 3600);
   const bearing = (flight.trackDegrees * Math.PI) / 180;
   const latitude = flight.latitude + (distanceKm * Math.cos(bearing)) / 111.32;
@@ -124,13 +124,15 @@ export default function Home() {
   const [now, setNow] = useState<number | null>(null);
   const [status, setStatus] = useState<"loading" | "live" | "error">("loading");
   const [message, setMessage] = useState("Looking for nearby aircraft…");
+  const [showLoveNote, setShowLoveNote] = useState(false);
   const activeCityRef = useRef<City>("chennai");
+  const loveNoteTimerRef = useRef<number | null>(null);
 
   const fetchFlights = useCallback(async (selectedCity: City, signal?: AbortSignal) => {
     try {
       const location = LOCATIONS[selectedCity];
       const response = await fetch(
-        `https://api.airplanes.live/v2/point/${location.latitude}/${location.longitude}/${SEARCH_RADIUS_NM}`,
+        `/api/flights?city=${selectedCity}`,
         {
         cache: "no-store",
         signal,
@@ -187,7 +189,7 @@ export default function Home() {
       setStatus("live");
       setMessage(
         nextFlights.length === 0
-          ? `No aircraft within ${RADAR_RADIUS_KM} km right now`
+          ? `No live aircraft reported within ${RADAR_RADIUS_KM} km`
           : `${nextFlights.length} aircraft nearby`,
       );
     } catch (error) {
@@ -216,6 +218,19 @@ export default function Home() {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (loveNoteTimerRef.current !== null) window.clearTimeout(loveNoteTimerRef.current);
+    },
+    [],
+  );
+
+  const revealLoveNote = () => {
+    setShowLoveNote(true);
+    if (loveNoteTimerRef.current !== null) window.clearTimeout(loveNoteTimerRef.current);
+    loveNoteTimerRef.current = window.setTimeout(() => setShowLoveNote(false), 4000);
+  };
 
   const time = useMemo(
     () => {
@@ -339,12 +354,15 @@ export default function Home() {
 
         {plottedFlights.length === 0 && (
           <p className={`feed-message feed-message--${status}`}>
-            {status === "live" ? `No aircraft within ${RADAR_RADIUS_KM} km right now` : message}
+            {status === "live" ? `No live aircraft reported within ${RADAR_RADIUS_KM} km` : message}
           </p>
         )}
       </section>
 
       <footer className="dibbo-marker">
+        {showLoveNote && (
+          <span className="love-note" role="status">love you my nerd</span>
+        )}
         <div className="dibbo-pin" aria-hidden="true"><span /></div>
         <div className="dibbo-label">
           <strong>dibbo</strong>
@@ -361,7 +379,16 @@ export default function Home() {
             <span className={`live-state live-state--${status}`}>{status === "live" ? "live" : status}</span>
           </div>
         </div>
-        <span className="footer-heart" aria-label="Made with care" title="Made with care">♥</span>
+        <button
+          className="footer-heart"
+          type="button"
+          aria-label="Reveal a message"
+          aria-expanded={showLoveNote}
+          title="Made with care"
+          onClick={revealLoveNote}
+        >
+          ♥
+        </button>
       </footer>
     </main>
   );
