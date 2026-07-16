@@ -43,6 +43,7 @@ const REFRESH_INTERVAL_MS = 10_000;
 const RADAR_RADIUS_KM = 100;
 const SEARCH_RADIUS_NM = 100;
 const MAX_TRACK_AGE_MS = 30 * 60 * 1000;
+const MAX_VISIBLE_LABELS = 7;
 
 const SKY_BACKGROUNDS: Record<SkyPeriod, string> = {
   dawn:
@@ -241,6 +242,42 @@ export default function Home() {
     [flights, city, now],
   );
 
+  const labelledFlightIds = useMemo(() => {
+    type LabelBox = { left: number; right: number; top: number; bottom: number };
+    const occupied: LabelBox[] = [];
+    const labelled = new Set<string>();
+
+    [...plottedFlights]
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .some(({ flight, x, y }) => {
+        const labelOnLeft = x > 64;
+        const labelWidth = 31;
+        const gap = 2.5;
+        const box = {
+          left: labelOnLeft ? x - labelWidth - gap : x + gap,
+          right: labelOnLeft ? x - gap : x + labelWidth + gap,
+          top: y - 2.8,
+          bottom: y + 4.8,
+        };
+        const overlaps = occupied.some(
+          (other) =>
+            box.left < other.right + 1.5 &&
+            box.right > other.left - 1.5 &&
+            box.top < other.bottom + 1.2 &&
+            box.bottom > other.top - 1.2,
+        );
+
+        if (!overlaps) {
+          occupied.push(box);
+          labelled.add(flight.id);
+        }
+
+        return labelled.size >= MAX_VISIBLE_LABELS;
+      });
+
+    return labelled;
+  }, [plottedFlights]);
+
   const skyPeriod = useMemo(() => now === null ? "day" : getSkyPeriod(now), [now]);
 
   return (
@@ -274,6 +311,7 @@ export default function Home() {
 
       <section className="airspace" aria-live="polite" aria-label={`Live flights near ${LOCATIONS[city].label}`}>
         {plottedFlights.map(({ flight, x, y, distanceKm }) => {
+          const labelIsVisible = labelledFlightIds.has(flight.id);
           const style = {
             left: `${x}%`,
             top: `${y}%`,
@@ -281,9 +319,10 @@ export default function Home() {
           } as CSSProperties;
           return (
             <article
-              className={`flight ${x > 68 ? "flight--label-left" : ""}`}
+              className={`flight ${x > 64 ? "flight--label-left" : ""} ${labelIsVisible ? "" : "flight--label-hidden"}`}
               key={flight.id}
               style={style}
+              aria-label={`${flight.callsign}, ${flight.aircraftType}, ${formatAltitude(flight.altitudeFeet)}, ${distanceKm.toFixed(1)} kilometres away`}
             >
               <span className="flight-motion" aria-hidden="true">
                 <span className="flight-trail" />

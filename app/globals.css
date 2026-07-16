@@ -248,9 +248,11 @@ button { font: inherit; }
   gap: .08rem;
   white-space: nowrap;
   text-shadow: 0 1px 8px var(--theme-text-shadow);
+  transition: opacity .25s ease;
 }
 
 .flight--label-left .flight-info { left: auto; right: .95rem; align-items: flex-end; }
+.flight--label-hidden .flight-info { opacity: 0; pointer-events: none; }
 
 .flight-info strong { color: var(--theme-ink); font-size: .68rem; font-weight: 700; letter-spacing: .08em; }
 
